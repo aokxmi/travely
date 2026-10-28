@@ -1,0 +1,7 @@
+{
+  "name": "Trip Planner",
+  "description": "Tell it where you're going, for how many days, how much you can spend and what you enjoy. Get a claymorphic day-by-day plan with budget tracking.",
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
