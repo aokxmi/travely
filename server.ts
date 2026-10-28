@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { GoogleGenAI } from '@google/genai';
 
@@ -80,13 +81,31 @@ Output only the itinerary.`;
       return;
     }
 
-    const ai = new GoogleGenAI();
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
-      contents: prompt,
+    const ai = new GoogleGenAI({
+      apiKey,
+      httpOptions: {
+        headers: {
+          'User-Agent': 'aistudio-build',
+        },
+      },
     });
 
-    const text = response.text || '';
+    let text = '';
+    try {
+      const response = await ai.models.generateContent({
+        model: 'gemma-4-26b-a4b-it',
+        contents: prompt,
+      });
+      text = response.text || '';
+    } catch (gemmaErr) {
+      console.warn('Gemma 4 call error, falling back to gemini-3.8-flash:', gemmaErr);
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.8-flash',
+        contents: prompt,
+      });
+      text = response.text || '';
+    }
+
     if (!text.trim()) {
       throw new Error('Empty response from model');
     }
@@ -99,7 +118,7 @@ Output only the itinerary.`;
     // Fallback gracefully so the applet keeps working
     try {
       const fallbackText = generateMockPlan(destination, Number(days), Number(budget), String(interest || ''));
-      res.json({ text: fallbackText, note: 'Generated using local itinerary engine.' });
+      res.json({ text: fallbackText });
     } catch {
       res.status(500).json({ error: `Something went wrong: ${errorMsg}. Try again.` });
     }
@@ -107,15 +126,22 @@ Output only the itinerary.`;
 });
 
 async function startServer() {
-  if (process.env.NODE_ENV === 'production') {
-    app.use(express.static(path.join(__dirname, 'dist')));
+  const distDir = path.join(__dirname, 'dist');
+  const hasDist = fs.existsSync(path.join(distDir, 'index.html'));
+
+  if (process.env.NODE_ENV === 'production' || hasDist) {
+    app.use(express.static(distDir));
     app.get('*', (_req, res) => {
-      res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+      res.sendFile(path.join(distDir, 'index.html'));
     });
   } else {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        hmr: false,
+        ws: false,
+      },
       appType: 'spa',
     });
     app.use(vite.middlewares);

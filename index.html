@@ -7,6 +7,21 @@
     <meta name="description" content="Tell it where you're going, for how many days, how much you can spend and what you enjoy. Get a claymorphic day-by-day plan with budget tracking." />
     <meta property="og:title" content="Trip Planner" />
     <meta property="og:description" content="Tell it where you're going, for how many days, how much you can spend and what you enjoy. Get a claymorphic day-by-day plan with budget tracking." />
+    <script>
+      // Suppress benign WebSocket/HMR transport errors in iframe environment
+      window.addEventListener('error', function (event) {
+        if (event.message && (event.message.includes('WebSocket') || event.message.includes('createWebSocketModuleRunnerTransport') || event.message.includes('@vite/client'))) {
+          event.stopImmediatePropagation();
+          event.preventDefault();
+        }
+      });
+      window.addEventListener('unhandledrejection', function (event) {
+        if (event.reason && String(event.reason).includes('WebSocket')) {
+          event.stopImmediatePropagation();
+          event.preventDefault();
+        }
+      });
+    </script>
   </head>
   <body>
     <div id="root"></div>
